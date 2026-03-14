@@ -1,13 +1,14 @@
 """
 导出模型为onnx模型，人工撰写
 """
-from DQNAgent import Agent
+from DQNAgent import Agent,Agent1
 from Match3_Env import Match3Env
 import torch
 
 env = Match3Env()
 state,_ = env.reset()
 agent = Agent(input_shape=(3,4,4),n_action=24)
+# agent = Agent1(input_shape=(3,4,4),n_action=24)
 
 device = torch.device("cuda") if torch.cuda.is_available() \
         else torch.device("cpu")

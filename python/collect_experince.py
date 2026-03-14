@@ -2,7 +2,7 @@
 收集状态输入作为校准数据集，收集Q值输出可作为验证，主要由人工撰写，少量gemini 2.5pro代码
 """
 import numpy as np
-from DQNAgent import  Agent
+from DQNAgent import  Agent,Agent1
 from Match3_Env import Match3Env
 import torch
 import random
@@ -12,6 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 INPUT_SIZE = (3,4,4)
 env = Match3Env()
 agent = Agent(INPUT_SIZE,n_action=24)
+# agent = Agent1(INPUT_SIZE,n_action=24)
 
 
 total_steps = 0

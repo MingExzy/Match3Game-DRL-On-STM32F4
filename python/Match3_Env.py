@@ -65,23 +65,22 @@ class Match3Env(gym.Env):
 
             # 3. 计算奖励
             num_eliminated = np.sum(matched_board)
-            reward = (num_eliminated ** 2) * combo_multiplier
+            reward = num_eliminated * combo_multiplier
             total_reward += reward
 
             # 4. 消除、下落、补充
             self._resolve_matches(matched_board)
 
-            combo_multiplier += 0.5  # 连锁消除奖励加成
+            combo_multiplier = 0.15 # 连锁消除奖励系数
 
         # 如果一步操作后没有任何消除，给予一个小小的负奖励鼓励有效操作
-        final_reward = np.clip(total_reward, a_min=-1.0, a_max=1.0)
         if total_reward == 0:
-            final_reward = -1.0
+            total_reward = -1.0
 
         # 5. 检查是否结束
         done = self.current_step >= self.max_steps
 
-        return self._get_obs(), final_reward, done, False, {}
+        return self._get_obs(),float(total_reward), done, False, {}
 
     def _swap(self, action):
         board_size = self.board_size

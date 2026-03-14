@@ -3,16 +3,17 @@
 用于训练和测试智能体
 """
 from Match3_Env import Match3Env
-from DQNAgent import Agent
+from DQNAgent import Agent,Agent1
 import numpy as np
 import torch
 import math
 import matplotlib.pyplot as plt
+from RewardClipper import QuantileRewardClipper
 
 # --- 超参数 ---
-EPISODES = 25000
+EPISODES = 30000
 EPS_START = 1.0
-EPS_END = 0.01
+EPS_END = 0.05
 EPS_DECAY = EPISODES/3
 TARGET_UPDATE_FREQ = 100# 每100步更新一次目标网络
 INPUT_SIZE = (3,4,4)
@@ -20,11 +21,13 @@ INPUT_SIZE = (3,4,4)
 # --- 初始化 ---
 env = Match3Env()
 agent = Agent(INPUT_SIZE,n_action=24)
+reward_clipper = QuantileRewardClipper()
 
 epsilon = EPS_START
 total_steps = 0
 all_rewards = []
 returns_list = []
+max_reward = 0
 
 # # --- 训练循环 ---
 for episode in range(EPISODES):
@@ -44,15 +47,21 @@ for episode in range(EPISODES):
         # 1.选择动作
         action = agent.select_action(state)
         next_state, reward, done, _, info = env.step(action)
+        reward = float(reward)
+
+        episode_reward += reward
+        reward_clipper.observe(reward)
+        reward = reward_clipper.transform(reward)
+
 
         # 2. 存储经验到回放缓冲
         state_tensor = agent.process(state)
         next_state_tensor = agent.process(next_state)
-        agent.memory.push(state_tensor, action, reward, next_state_tensor, done)
+        ex = (state_tensor, action, reward, next_state_tensor, done)
+        agent.memory.add(state_tensor, action, reward, next_state_tensor, done)
 
         # 3. 更新状态和奖励
         state = next_state
-        episode_reward += reward
         total_steps += 1
 
         # 4. 训练模型
@@ -69,7 +78,7 @@ for episode in range(EPISODES):
         returns_list.append(avg_reward)
 
         print(
-            f"Episode {episode + 1}/{EPISODES}, Steps: {total_steps}, Reward: {episode_reward:.2f}, Avg Reward(100): {avg_reward:.2f}, Epsilon: {epsilon:.3f}")
+            f"Episode {episode + 1}/{EPISODES}, Steps: {total_steps}, Reward: {episode_reward:.3f}, Avg Reward(100): {avg_reward:.2f}, Epsilon: {epsilon:.3f}")
 
 # 训练结束后可以保存模型
 episode = [(i+1)*100 for i in range(len(returns_list))]
@@ -80,25 +89,25 @@ plt.plot(episode,returns_list,label='avg_reward_curve')
 plt.legend()
 plt.show()
 
-torch.save(agent.policy_net.state_dict(), "match3_dqn_model_.pth")
+torch.save(agent.policy_net.state_dict(), "match3_dqn_model_v1_1e-5.pth")
 print("训练完成!")
 
-# --- 测试训练好的智能体 ---
-print("\n--- 开始测试100回合 ---")
-agent.policy_net.load_state_dict(torch.load("match3_dqn_model_.pth", weights_only=True))
-reward_list =[]
-for i in range(100):
-    state, _ = env.reset()
-    done = False
-    total_test_reward = 0
-    agent.epsilon = 0.0
-    while not done:
-        env.render()
-        action = agent.select_action(state) # 使用贪心策略
-        print(action)
-        next_state, reward, done, _, _ = env.step(action)
-        state = next_state
-        total_test_reward += reward
-    reward_list.append(total_test_reward)
-
-print(f"测试结束, 100回合平均奖励: {sum(reward_list)/len(reward_list)}")
+# # --- 测试训练好的智能体 ---
+# print("\n--- 开始测试100回合 ---")
+# agent.policy_net.load_state_dict(torch.load("match3_dqn_model_.pth", weights_only=True))
+# reward_list =[]
+# for i in range(100):
+#     state, _ = env.reset()
+#     done = False
+#     total_test_reward = 0
+#     agent.epsilon = 0.0
+#     while not done:
+#         env.render()
+#         action = agent.select_action(state) # 使用贪心策略
+#         print(action)
+#         next_state, reward, done, _, _ = env.step(action)
+#         state = next_state
+#         total_test_reward += reward
+#     reward_list.append(total_test_reward)
+#
+# print(f"测试结束, 100回合平均奖励: {sum(reward_list)/len(reward_list)}")
